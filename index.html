@@ -45,6 +45,14 @@
     <script>
         let total = 0;
 
+        // 加载存储的条目
+        function loadEntries() {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entries.forEach(entry => {
+                addEntryToTable(entry.item, entry.amount);
+            });
+        }
+
         function addEntry() {
             const item = document.getElementById('item').value;
             const amount = parseFloat(document.getElementById('amount').value);
@@ -52,9 +60,8 @@
                 total += amount;
                 document.getElementById('totalAmount').innerText = total;
 
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${item}</td><td>${amount}</td><td><button class="delete" onclick="deleteEntry(this, ${amount})">删除</button></td>`;
-                document.getElementById('entryList').appendChild(row);
+                addEntryToTable(item, amount);
+                saveEntry(item, amount);
 
                 document.getElementById('item').value = '';
                 document.getElementById('amount').value = '';
@@ -63,17 +70,37 @@
             }
         }
 
+        function addEntryToTable(item, amount) {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${item}</td><td>${amount}</td><td><button class="delete" onclick="deleteEntry(this, ${amount})">删除</button></td>`;
+            document.getElementById('entryList').appendChild(row);
+        }
+
+        function saveEntry(item, amount) {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entries.push({ item, amount });
+            localStorage.setItem('entries', JSON.stringify(entries));
+        }
+
         function deleteEntry(button, amount) {
             total -= amount;
             document.getElementById('totalAmount').innerText = total;
             const row = button.parentNode.parentNode;
             row.parentNode.removeChild(row);
+            removeEntryFromStorage(row.cells[0].innerText); // 从存储中移除条目
+        }
+
+        function removeEntryFromStorage(item) {
+            let entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entries = entries.filter(entry => entry.item !== item);
+            localStorage.setItem('entries', JSON.stringify(entries));
         }
 
         function clearEntries() {
             total = 0;
             document.getElementById('totalAmount').innerText = total;
             document.getElementById('entryList').innerHTML = '';
+            localStorage.removeItem('entries'); // 清除存储
         }
 
         function copyEntries() {
@@ -81,16 +108,19 @@
             let textContent = "条目\t金额\n";
             rows.forEach(row => {
                 const cols = row.querySelectorAll('td');
-                const data = Array.from(cols).slice(0, 2).map(col => col.innerText).join('\t'); // 只获取条目和金额
+                const data = Array.from(cols).slice(0, 2).map(col => col.innerText).join('\t');
                 textContent += data + "\n";
             });
-            textContent += `总计\t${total}\n`; // 添加总计行
+            textContent += `总计\t${total}\n`;
             navigator.clipboard.writeText(textContent).then(() => {
                 alert('明细已复制到剪贴板！');
             }, () => {
                 alert('复制失败，请手动复制。');
             });
         }
+
+        // 页面加载时调用
+        window.onload = loadEntries;
     </script>
 </body>
 </html>

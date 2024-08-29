@@ -3,98 +3,176 @@
 <head>
    <title>每日支出统计</title>
    <style>
-       body {
-           font-family: Arial, sans-serif;
-           background-color: #f9f9f9;
-           margin: 0;
-           padding: 0;
-       }
        .container {
-           margin: 20px auto;
-           width: 80%;
-           max-width: 600px;
-           background-color: #fff;
+           margin: 0 auto;
+           width: 400px;
            padding: 20px;
-           border-radius: 8px;
-           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-       }
-       h1 {
+           border: 1px solid #ccc;
            text-align: center;
-           color: #333;
-       }
-       form {
-           margin-bottom: 20px;
-       }
-       label {
-           display: block;
-           margin-bottom: 5px;
-           color: #333;
        }
        input[type="text"],
-       input[type="number"],
-       input[type="date"] {
+       input[type="number"] {
            width: 100%;
            padding: 10px;
            margin-bottom: 10px;
-           border: 1px solid #ccc;
-           border-radius: 4px;
-       }
-       button {
-           padding: 10px 20px;
-           background-color: #007bff;
-           color: #fff;
-           border: none;
-           border-radius: 4px;
-           cursor: pointer;
-       }
-       button:hover {
-           background-color: #0056b3;
        }
        table {
            width: 100%;
-           border-collapse: collapse;
-           margin-bottom: 20px;
        }
        th, td {
            padding: 8px;
-           border-bottom: 1px solid #ddd;
-           text-align: left;
        }
        th {
            background-color: #f2f2f2;
+       }
+       .delete-btn {
+           padding: 4px 8px;
+           background-color: #ff6666;
+           color: #fff;
+           border: none;
+           cursor: pointer;
+       }
+       .date-picker {
+           margin-bottom: 10px;
        }
    </style>
 </head>
 <body>
    <div class="container">
-       <h1>每日支出统计</h1>
+       <h2>每日支出统计</h2>
        <form id="expenseForm">
-           <label for="date">日期：</label>
-           <input type="date" id="date" required><br>
            <label for="description">描述：</label>
            <input type="text" id="description" required><br>
            <label for="amount">金额：</label>
            <input type="number" id="amount" step="0.01" required><br>
            <button type="submit">添加支出</button>
        </form>
-       <table id="expenseTable">
-           <thead>
-               <tr>
-                   <th>日期</th>
-                   <th>描述</th>
-                   <th>金额</th>
-                   <th>操作</th>
-               </tr>
-           </thead>
-           <tbody>
-           </tbody>
-       </table>
-       <h3>当天支出总计：<span id="totalAmount">0</span></h3>
+       <div class="date-picker">
+           <label for="datepicker">选择日期：</label>
+           <input type="date" id="datepicker">
+           <button id="searchBtn">查询</button>
+       </div>
+       <div id="expenseList">
+           <h3>当天支出列表</h3>
+           <table id="expenseTable">
+               <thead>
+                   <tr>
+                       <th>描述</th>
+                       <th>金额</th>
+                       <th>操作</th>
+                   </tr>
+               </thead>
+               <tbody>
+               </tbody>
+           </table>
+           <h3>当天支出总计：<span id="totalAmount">0</span></h3>
+       </div>
    </div>
 
    <script>
-       // JavaScript代码，包括支出记录添加和查询功能
-       // 省略部分代码
+       const expenseForm = document.getElementById('expenseForm');
+       const expenseTable = document.getElementById('expenseTable');
+       const totalAmount = document.getElementById('totalAmount');
+       const datepicker = document.getElementById('datepicker');
+       const searchBtn = document.getElementById('searchBtn');
+
+       let total = 0;
+       let expenses = [];
+
+       expenseForm.addEventListener('submit', function(event) {
+           event.preventDefault();
+           const descriptionInput = document.getElementById('description');
+           const amountInput = document.getElementById('amount');
+
+           const description = descriptionInput.value;
+           const amount = parseFloat(amountInput.value);
+
+           addExpense(description, amount);
+
+           descriptionInput.value = '';
+           amountInput.value = '';
+           descriptionInput.focus();
+       });
+
+       function addExpense(description, amount) {
+           const row = document.createElement('tr');
+           const descriptionCell = document.createElement('td');
+           const amountCell = document.createElement('td');
+           const deleteCell = document.createElement('td');
+           const deleteBtn = document.createElement('button');
+
+           descriptionCell.textContent = description;
+           amountCell.textContent = amount.toFixed(2);
+
+           deleteBtn.textContent = '删除';
+           deleteBtn.classList.add('delete-btn');
+           deleteBtn.addEventListener('click', function() {
+               deleteExpense(row);
+           });
+
+           descriptionCell.setAttribute('contenteditable', 'true');
+           amountCell.setAttribute('contenteditable', 'true');
+
+           row.appendChild(descriptionCell);
+           row.appendChild(amountCell);
+           deleteCell.appendChild(deleteBtn);
+           row.appendChild(deleteCell);
+
+           expenseTable.querySelector('tbody').appendChild(row);
+
+           const expense = {
+               description: description,
+               amount: amount,
+               row: row
+           };
+           expenses.push(expense);
+
+           updateTotal();
+       }
+
+       function deleteExpense(row) {
+           const index = expenses.findIndex(expense => expense.row === row);
+           if (index !== -1) {
+               expenses.splice(index, 1);
+               row.remove();
+               updateTotal();
+           }
+       }
+
+       function updateTotal() {
+           total = 0;
+           expenses.forEach(expense => {
+               total += expense.amount;
+           });
+           totalAmount.textContent = total.toFixed(2);
+       }
+
+       searchBtn.addEventListener('click', function() {
+           const selectedDate = datepicker.value;
+           showExpensesByDate(selectedDate);
+       });
+
+       function showExpensesByDate(date) {
+           const filteredExpenses = expenses.filter(expense => {
+               const expenseDate = new Date().toLocaleDateString(date);
+               return expenseDate === date;
+           });
+
+           clearExpenseTable();
+
+           filteredExpenses.forEach(expense => {
+               const row = expense.row.cloneNode(true);
+               expenseTable.querySelector('tbody').appendChild(row);
+           });
+
+           updateTotal();
+       }
+
+       function clearExpenseTable() {
+           while (expenseTable.querySelector('tbody').firstChild) {
+               expenseTable.querySelector('tbody').firstChild.remove();
+           }
+       }
    </script>
 </body>
 </html>

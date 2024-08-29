@@ -50,7 +50,9 @@
             const entries = JSON.parse(localStorage.getItem('entries')) || [];
             entries.forEach(entry => {
                 addEntryToTable(entry.item, entry.amount);
+                total += entry.amount; // 更新总计
             });
+            document.getElementById('totalAmount').innerText = total; // 显示总计
         }
 
         function addEntry() {
